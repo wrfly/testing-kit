@@ -12,9 +12,12 @@ import (
 )
 
 var (
-	remote *string
-	times  *int
-	port   *int
+	remote    *string
+	times     *int
+	port      *int
+	wg        sync.WaitGroup
+	connGroup []net.Conn
+	clientNum *int
 )
 
 type packet struct {
@@ -23,13 +26,22 @@ type packet struct {
 
 func main() {
 	port = flag.Int("l", 1111, "local port to listen")
-	times = flag.Int("t", 10000, "how many times to repeat")
+	times = flag.Int("t", 100000, "how many times to repeat")
 	remote = flag.String("r", "localhost:12345", "remote addr to send packet")
+	clientNum = flag.Int("c", 10, "client num")
 	flag.Parse()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	var wg sync.WaitGroup
+
+	for i := 0; i < *clientNum; i++ {
+		conn, err := net.Dial("udp", *remote)
+		if err != nil {
+			log.Printf("conn error: %s", err)
+			return
+		}
+		connGroup = append(connGroup, conn)
+	}
 
 	go func() {
 		wg.Add(1)
@@ -38,9 +50,21 @@ func main() {
 		for {
 			select {
 			case <-ctx.Done():
+				for _, conn := range connGroup {
+					conn.Close()
+				}
 				return
 			case pkt := <-pktChan:
-				go send(pkt)
+				go func(pkt packet) {
+					for n, conn := range connGroup {
+						log.Printf("[%d] send to %s\n", n, *remote)
+						go func(conn net.Conn) {
+							for i := 0; i < *times / *clientNum; i++ {
+								conn.Write(pkt.data)
+							}
+						}(conn)
+					}
+				}(pkt)
 			}
 		}
 	}()
@@ -60,29 +84,6 @@ func main() {
 	// fmem, _ := os.Create("leak.prof")
 	// pprof.WriteHeapProfile(fmem)
 
-}
-
-func send(pkt packet) {
-	log.Printf("send to %s\n", *remote)
-
-	n, err := net.Dial("udp", *remote)
-	if err != nil {
-		log.Printf("conn error: %s", err)
-		return
-	}
-	defer n.Close()
-
-	var wg sync.WaitGroup
-	wg.Add(*times)
-	for i := 0; i < *times; i++ {
-		go func() {
-			n.Write(pkt.data)
-			wg.Done()
-		}()
-	}
-	wg.Wait()
-
-	return
 }
 
 func serveUDP(ctx context.Context, port int) chan packet {
