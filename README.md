@@ -51,6 +51,35 @@ Usage of ./tcp-repeater:
 ➜
 ```
 
+### creazy-udp
+
+```txt
+➜ ./creazy-udp -h
+Usage of ./creazy-udp:
+  -c runtime.NumCPU()
+        client num, default is runtime.NumCPU() (default 4)
+  -d string
+        data to send, empty by default
+  -n int
+        send rate, <num>/s (default 10000)
+  -r string
+        remote addr to send packet (default "localhost:12345")
+
+➜ ./creazy-udp -d "hello"
+2018/01/11 22:27:02 send 'hello' to [localhost:12345] with [4] clients at 10000/s
+2018/01/11 22:27:03 send: 10000/s
+2018/01/11 22:27:04 send: 10000/s
+2018/01/11 22:27:05 send: 10000/s
+2018/01/11 22:27:06 send: 10000/s
+2018/01/11 22:27:07 send: 10000/s
+2018/01/11 22:27:08 send: 10000/s
+2018/01/11 22:27:09 send: 10000/s
+2018/01/11 22:27:10 send: 10000/s
+2018/01/11 22:27:11 send: 10000/s
+^C2018/01/11 22:27:11 quit
+➜
+```
+
 ## statistic
 
 ### packet-counter
