@@ -9,7 +9,6 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
-	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -20,7 +19,6 @@ var (
 	port      *int
 	clientNum *int
 
-	wg        sync.WaitGroup
 	connGroup []net.Conn
 
 	sentPkt    uint64 // send per second
@@ -53,8 +51,6 @@ func main() {
 	}
 
 	go func() {
-		wg.Add(1)
-		defer wg.Done()
 		numPerClient := *times / *clientNum
 		pktChan := serveUDP(ctx, *port)
 		for pkt := range pktChan {
@@ -82,8 +78,6 @@ func main() {
 	for _, conn := range connGroup {
 		conn.Close()
 	}
-
-	wg.Wait()
 
 	log.Println("quit")
 }

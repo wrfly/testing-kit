@@ -22,7 +22,6 @@ var (
 	port      *int
 	clientNum *int
 
-	wg           sync.WaitGroup
 	connGroup    []net.Conn
 	numPerClient int
 
@@ -64,8 +63,6 @@ func main() {
 	}
 
 	go func() {
-		wg.Add(1)
-		defer wg.Done()
 		numPerClient = *times / *clientNum
 		pktChan := serveTCP(ctx, *port)
 		for pkt := range pktChan {
@@ -84,8 +81,6 @@ func main() {
 	for _, conn := range connGroup {
 		conn.Close()
 	}
-
-	wg.Wait()
 
 	log.Println("quit")
 }

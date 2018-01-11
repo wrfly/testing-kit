@@ -9,7 +9,6 @@ import (
 	"net"
 	"os"
 	"os/signal"
-	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -30,25 +29,18 @@ func main() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	var wg sync.WaitGroup
 
 	go func() {
-		wg.Add(1)
-		defer wg.Done()
 		log.Printf("listenning on UDP %s\n", addr)
 		serveUDP(ctx, *port)
 	}()
 
 	go func() {
-		wg.Add(1)
-		defer wg.Done()
 		log.Printf("listenning on TCP %s\n", addr)
 		serveTCP(ctx, *port)
 	}()
 
 	go func() {
-		wg.Add(1)
-		defer wg.Done()
 		statistic(ctx)
 	}()
 
@@ -57,8 +49,6 @@ func main() {
 
 	<-sigChan
 	cancel()
-
-	wg.Wait()
 
 	log.Println("quit")
 }
@@ -129,20 +119,18 @@ func serveTCP(ctx context.Context, port int) {
 }
 
 func statistic(ctx context.Context) {
-	var beforeUDP uint64
-	var beforeTCP uint64
 	for {
-		beforeUDP = atomic.LoadUint64(&nUDP)
-		beforeTCP = atomic.LoadUint64(&nTCP)
-		time.Sleep(time.Second)
-		if n := atomic.LoadUint64(&nUDP) - beforeUDP; n != 0 {
-			log.Printf("UDP: %d/s\n", n)
-		}
-		if n := atomic.LoadUint64(&nTCP) - beforeTCP; n != 0 {
-			log.Printf("TCP: %d/s\n", n)
-		}
 		if ctx.Err() != nil {
 			return
 		}
+		if atomic.LoadUint64(&nUDP) != 0 {
+			log.Printf("UDP: %d/s\n", atomic.LoadUint64(&nUDP))
+			atomic.StoreUint64(&nUDP, 0)
+		}
+		if atomic.LoadUint64(&nTCP) != 0 {
+			log.Printf("TCP: %d/s\n", atomic.LoadUint64(&nTCP))
+			atomic.StoreUint64(&nTCP, 0)
+		}
+		time.Sleep(time.Second)
 	}
 }
