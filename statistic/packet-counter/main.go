@@ -119,18 +119,22 @@ func serveTCP(ctx context.Context, port int) {
 }
 
 func statistic(ctx context.Context) {
+	nu := atomic.LoadUint64(&nUDP)
+	nt := atomic.LoadUint64(&nTCP)
+	tk := time.NewTicker(time.Second)
+	defer tk.Stop()
 	for {
-		if ctx.Err() != nil {
+		select {
+		case <-ctx.Done():
 			return
-		}
-		if atomic.LoadUint64(&nUDP) != 0 {
-			log.Printf("UDP: %d/s\n", atomic.LoadUint64(&nUDP))
+		case <-tk.C:
+			nu = atomic.LoadUint64(&nUDP)
+			nt = atomic.LoadUint64(&nTCP)
 			atomic.StoreUint64(&nUDP, 0)
-		}
-		if atomic.LoadUint64(&nTCP) != 0 {
-			log.Printf("TCP: %d/s\n", atomic.LoadUint64(&nTCP))
 			atomic.StoreUint64(&nTCP, 0)
+			if nu != 0 || nt != 0 {
+				log.Printf("UDP: %v/s   TCP: %v/s\n", nu, nt)
+			}
 		}
-		time.Sleep(time.Second)
 	}
 }

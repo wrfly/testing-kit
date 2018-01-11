@@ -83,8 +83,8 @@ func main() {
 }
 
 func statistic(ctx context.Context) {
-	receive := atomic.LoadUint64(&receivePkt)
-	sent := atomic.LoadUint64(&sentPkt)
+	r := atomic.LoadUint64(&receivePkt)
+	s := atomic.LoadUint64(&sentPkt)
 	tk := time.NewTicker(time.Second)
 	defer tk.Stop()
 	for {
@@ -92,13 +92,13 @@ func statistic(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-tk.C:
-			r := atomic.LoadUint64(&receivePkt) - receive
-			s := atomic.LoadUint64(&sentPkt) - sent
+			r = atomic.LoadUint64(&receivePkt)
+			s = atomic.LoadUint64(&sentPkt)
+			atomic.StoreUint64(&receivePkt, 0)
+			atomic.StoreUint64(&sentPkt, 0)
 			if r != 0 || s != 0 {
 				log.Printf("receive: %v/s\tsend: %v/s\n", r, s)
 			}
-			receive = atomic.LoadUint64(&receivePkt)
-			sent = atomic.LoadUint64(&sentPkt)
 		}
 	}
 }
