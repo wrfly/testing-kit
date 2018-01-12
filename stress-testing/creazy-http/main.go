@@ -10,8 +10,9 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"runtime"
+	"runtime/debug"
 	"strings"
-	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -19,7 +20,6 @@ import (
 var (
 	sentNum  uint64
 	errorNum uint64
-	jobWG    sync.WaitGroup
 )
 
 type cli struct {
@@ -27,7 +27,7 @@ type cli struct {
 
 	url     string
 	host    string
-	times   int
+	rate    int
 	method  string
 	payload io.Reader
 }
@@ -36,19 +36,17 @@ func (c *cli) resolvHost() string {
 	return "127.0.0.1"
 }
 
-func (c *cli) do(ctx context.Context) chan struct{} {
+func (c *cli) do(ctx context.Context) {
 	req, err := http.NewRequest(c.method, c.url, c.payload)
 	if err != nil {
 		log.Fatalf("create request error: %s", err)
 	}
 	req.Host = c.resolvHost()
 
-	done := make(chan struct{})
-
-	if c.times <= 0 {
+	if c.rate <= 0 {
+		// unlimited mode
 		go func() {
 			for ctx.Err() == nil {
-				jobWG.Add(1)
 				go func() {
 					if _, err := c.C.Do(req); err != nil {
 						atomic.AddUint64(&errorNum, 1)
@@ -59,13 +57,12 @@ func (c *cli) do(ctx context.Context) chan struct{} {
 		}()
 	} else {
 		go func() {
-			for i := 0; i < c.times; i++ {
-				if ctx.Err() != nil {
-					break
-				}
-				jobWG.Add(1)
+			for ctx.Err() == nil {
+				// token bucket
+				// if !tokenbucket.Take(1) {
+				// 	continue
+				// }
 				go func() {
-					defer jobWG.Done()
 					if _, err := c.C.Do(req); err != nil {
 						atomic.AddUint64(&errorNum, 1)
 					}
@@ -77,12 +74,9 @@ func (c *cli) do(ctx context.Context) chan struct{} {
 
 	go func() {
 		printStatus(ctx)
-		// wait for all jobs done, if times > 0
-		jobWG.Wait()
-		close(done)
 	}()
 
-	return done
+	return
 }
 
 func printStatus(ctx context.Context) {
@@ -122,13 +116,12 @@ func handleCookie(f io.Reader, URL string) http.CookieJar {
 
 func main() {
 	// flags
-	times := flag.Int("t", 10000, `how many times do you need to send, 
-        set to -1 for unlimited mode`)
+	rate := flag.Int("r", 1000, `sending rate, <num>/s`)
 	timeout := flag.Int("timeout", 5, "timeout for the client")
 	target := flag.String("u", "http://localhost", "target url")
 	method := flag.String("m", "GET", "method: GET|POST")
-	postFile := flag.String("pf", "", "post file")
-	cookieFile := flag.String("cf", "", "cookie file")
+	postFile := flag.String("pf", "", "post file path")
+	cookieFile := flag.String("cf", "", "cookie file path")
 	flag.Parse()
 
 	// check and modify
@@ -140,8 +133,10 @@ func main() {
 	sigChan := make(chan os.Signal)
 	signal.Notify(sigChan, os.Interrupt)
 
-	// post file
-	var pld io.Reader
+	var (
+		pld       io.Reader
+		cookieJar http.CookieJar
+	)
 	if *postFile != "" {
 		if f, err := os.Open(*postFile); err != nil {
 			log.Fatalf("open file error: %s", err)
@@ -149,7 +144,6 @@ func main() {
 			pld = f
 		}
 	}
-	var cookieJar http.CookieJar
 	if *cookieFile != "" {
 		if f, err := os.Open(*cookieFile); err != nil {
 			log.Fatalf("open file error: %s", err)
@@ -164,40 +158,25 @@ func main() {
 			Jar:     cookieJar,
 		},
 		url:     *target,
-		times:   *times,
+		rate:    *rate,
 		method:  *method,
 		payload: pld,
 	}
 
 	// ready
-	log.Printf("send [%d] packages to [%s], method: %s, timeout: %d",
-		*times, *target, *method, *timeout)
+	log.Printf("send [%d]/s packages to [%s], method: %s, timeout: %d",
+		*rate, *target, *method, *timeout)
 
 	// go
-	done := client.do(ctx)
+	go client.do(ctx)
 
-	select {
-	case <-sigChan:
-		log.Println("canceled")
-	case <-done:
-		log.Println("all jobs done")
-	}
+	<-sigChan
+
 	log.Println("about to quit")
 	cancel()
 
-	// quit with deadline
-	tk := time.NewTicker(time.Second * 10)
-	select {
-	case <-tk.C:
-		log.Println("force quit")
-	case <-func() chan bool {
-		c := make(chan bool, 1)
-		jobWG.Wait()
-		c <- true
-		return c
-	}():
-		log.Println("quit")
-	}
+	runtime.GC()
+	debug.FreeOSMemory()
 
 	return
 }
