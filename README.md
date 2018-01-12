@@ -2,7 +2,7 @@
 
 some tools for testing
 
-## strss-testing
+## Stress-Testing
 
 ### udp-repeater
 
@@ -80,7 +80,7 @@ Usage of ./creazy-udp:
 ➜
 ```
 
-## statistic
+## Statistic
 
 ### packet-counter
 
@@ -100,4 +100,23 @@ Usage of ./packet-collector:
 2018/01/09 21:28:43 TCP: 2979672/s
 2018/01/09 21:28:44 TCP: 2210824/s
 ^C2018/01/09 21:28:56 quit
+```
+
+## Utils
+
+### tokenbucket
+
+`import "github.com/wrfly/testing-kit/utils/tokenbucket"` to use this token bucket lib.
+
+Performence(`examplt/main.go` with *i7-7600U*):
+
+```txt
+2018/01/13 02:16:43 5s test with 1000/s
+2018/01/13 02:16:48 used: 5000064399 ns
+2018/01/13 02:16:48 take: 4999
+2018/01/13 02:16:48 drop: 57031252
+2018/01/13 02:16:48 range [100000000] test
+2018/01/13 02:16:53 used: 4942880532 ns
+2018/01/13 02:16:53 take: 4942
+2018/01/13 02:16:53 drop: 99995058
 ```
