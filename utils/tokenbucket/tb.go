@@ -1,9 +1,16 @@
 /*
-package tokenbucket provided a token bucket ...
+package tokenbucket provides a token bucket ...
 
 example:
 
-
+	bkt := New(1000, time.Second)
+	for check() {
+		if bkt.TakeOne() {
+			take++
+			continue
+		}
+		drop++
+	}
 
 */
 package tokenbucket
