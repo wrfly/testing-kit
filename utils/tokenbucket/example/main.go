@@ -15,24 +15,20 @@ func main() {
 	bkt := tokenbucket.New(1000, time.Second)
 
 	log.Println("5s test with 1000/s")
-	ctx, cancel := context.WithCancel(context.Background())
-	go func() {
-		start = time.Now()
-		for ctx.Err() == nil {
-			if bkt.TakeOne() {
-				take++
-				continue
-			}
-			drop++
+	ctx, cancel := context.WithDeadline(context.Background(),
+		time.Now().Add(time.Second*5))
+	defer cancel()
+	start = time.Now()
+	for ctx.Err() == nil {
+		if bkt.TakeOne() {
+			take++
+			continue
 		}
-		log.Println("used:", time.Since(start).Nanoseconds(), "ns")
-		log.Println("take:", take)
-		log.Println("drop:", drop)
-	}()
-	time.Sleep(5 * time.Second)
-	cancel()
-
-	time.Sleep(time.Millisecond)
+		drop++
+	}
+	log.Println("used:", time.Since(start).Seconds(), "s")
+	log.Println("take:", take)
+	log.Println("drop:", drop)
 
 	num := int(1e8)
 	log.Printf("range [%d] test\n", num)
@@ -45,7 +41,7 @@ func main() {
 		}
 		drop++
 	}
-	log.Println("used:", time.Since(start).Nanoseconds(), "ns")
+	log.Println("used:", time.Since(start).Seconds(), "s")
 	log.Println("take:", take)
 	log.Println("drop:", drop)
 }

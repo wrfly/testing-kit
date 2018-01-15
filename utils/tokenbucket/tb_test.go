@@ -11,28 +11,26 @@ func TestTokenBucket(t *testing.T) {
 	var take, drop = 0, 0
 	var start time.Time
 
-	bkt := New(1000, time.Second)
-
 	log.Println("5s test")
-	ctx, cancel := context.WithCancel(context.Background())
-	go func() {
-		start = time.Now()
-		for ctx.Err() == nil {
-			if bkt.TakeOne() {
-				take++
-				continue
-			}
-			drop++
-		}
-		log.Println("used:", time.Since(start).Nanoseconds(), "ns")
-		log.Println("take:", take)
-		log.Println("drop:", drop)
-		log.Println()
-	}()
-	time.Sleep(5 * time.Second)
-	cancel()
+	ctx, cancel := context.WithDeadline(context.Background(),
+		time.Now().Add(time.Second*5))
+	defer cancel()
 
-	time.Sleep(time.Millisecond)
+	start = time.Now()
+	bkt := New(1000, time.Second)
+	for ctx.Err() == nil {
+		if bkt.TakeOne() {
+			take++
+			continue
+		}
+		drop++
+	}
+	log.Println("used:", time.Since(start), "s")
+	log.Println("take:", take)
+	log.Println("drop:", drop)
+	log.Println()
+
+	time.Sleep(time.Second)
 
 	take = 0
 	drop = 0
@@ -55,7 +53,7 @@ func TestTokenBucket(t *testing.T) {
 		}
 		drop++
 	}
-	log.Println("used:", time.Since(start).Nanoseconds(), "ns")
+	log.Println("used:", time.Since(start).Seconds(), "s")
 	log.Println("take:", take)
 	log.Println("drop:", drop)
 }
