@@ -106,11 +106,9 @@ Usage of ./packet-collector:
 
 ### tokenbucket
 
-This token bucket has no ticker to fill the bucket in background, just calculate the `next round` and make the bucket avaliable. Quite different from other token buckets implemented by locks or tickers or compare timestamps every time.
-
 `import "github.com/wrfly/testing-kit/utils/tokenbucket"` to use this token bucket lib.
 
-Performence(`examplt/main.go` with *i7-7600U*):
+Performence(`example/main.go` with *i7-7600U*):
 
 ```txt
 2018/01/15 23:12:45 5s test with 1000/s
@@ -120,5 +118,5 @@ Performence(`examplt/main.go` with *i7-7600U*):
 2018/01/15 23:12:50 range [100000000] test
 2018/01/15 23:12:51 used: 0.24327525 s
 2018/01/15 23:12:51 take: 242
-2018/01/15 23:12:51 drop: 99999758```
+2018/01/15 23:12:51 drop: 99999758
 ```
