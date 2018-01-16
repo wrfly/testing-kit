@@ -60,21 +60,24 @@ func (bkt *Bucket) TakeOne() bool {
 	if atomic.LoadInt32(&bkt.enough) == 0 {
 		return false
 	}
-	atomic.StoreInt32(&bkt.enough, 0)
+	if atomic.SwapInt32(&bkt.enough, 0) == 0 {
+		return false
+	}
 
 	// next round: enough
 	diff := time.Now().UnixNano() - atomic.LoadInt64(&bkt.lastGet)
 	n := diff / bkt.period
 
+	if n == 0 {
+		atomic.AddInt64(&bkt.lastGet, bkt.period)
+	} else {
+		atomic.AddInt64(&bkt.lastGet, bkt.period*n)
+	}
+
 	go func() {
 		time.Sleep(time.Duration(bkt.period - diff + n*bkt.period))
 		atomic.StoreInt32(&bkt.enough, 1)
 	}()
-
-	if n == 0 {
-		n = 1
-	}
-	atomic.AddInt64(&bkt.lastGet, bkt.period*n)
 
 	return true
 }
