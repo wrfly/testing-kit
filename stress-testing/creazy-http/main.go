@@ -1,9 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"flag"
+	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"net/http/cookiejar"
@@ -29,69 +32,61 @@ type cli struct {
 	host    string
 	rate    int
 	method  string
-	payload io.Reader
+	payload []byte
 }
 
 func (c *cli) resolvHost() string {
-	return "127.0.0.1"
+	return "106.75.85.238"
 }
 
 func (c *cli) do(ctx context.Context) {
-	req, err := http.NewRequest(c.method, c.url, c.payload)
+	// req, err := http.NewRequest(c.method, c.url, strings.NewReader("sss"))
+	req, err := http.NewRequest(c.method, c.url, bytes.NewReader(c.payload))
 	if err != nil {
 		log.Fatalf("create request error: %s", err)
 	}
-	req.Host = c.resolvHost()
 
-	if c.rate <= 0 {
-		// unlimited mode
-		go func() {
-			for ctx.Err() == nil {
-				go func() {
-					if _, err := c.C.Do(req); err != nil {
-						atomic.AddUint64(&errorNum, 1)
-					}
-					atomic.AddUint64(&sentNum, 1)
-				}()
-			}
-		}()
-	} else {
-		go func() {
-			for ctx.Err() == nil {
-				// token bucket
-				// if !tokenbucket.Take(1) {
-				// 	continue
-				// }
-				go func() {
-					if _, err := c.C.Do(req); err != nil {
-						atomic.AddUint64(&errorNum, 1)
-					}
-					atomic.AddUint64(&sentNum, 1)
-				}()
-			}
-		}()
-	}
+	// req.URL.Host = fmt.Sprintf("%s:%s",
+	// 	c.resolvHost(), req.URL.Port())
 
 	go func() {
-		printStatus(ctx)
-	}()
-
-	return
-}
-
-func printStatus(ctx context.Context) {
-	go func() {
-		var n uint64
+		tk := time.NewTicker(time.Second)
+		defer tk.Stop()
 		for ctx.Err() == nil {
-			n = atomic.LoadUint64(&sentNum)
-			time.Sleep(time.Second)
-			if diff := atomic.LoadUint64(&sentNum) - n; diff != 0 {
-				log.Printf("sent [%d], err [%d], RPS: %d/s",
-					atomic.LoadUint64(&sentNum),
-					atomic.LoadUint64(&errorNum), diff)
-			}
+			lastSent := atomic.LoadUint64(&sentNum)
+			<-tk.C
+			diff := atomic.LoadUint64(&sentNum) - lastSent
+			log.Printf("sent [%d], err [%d], RPS: %d/s",
+				atomic.LoadUint64(&sentNum),
+				atomic.LoadUint64(&errorNum), diff)
 		}
 	}()
+
+	biu := func() {
+		resp, err := c.C.Do(req)
+		if err != nil {
+			fmt.Println(err)
+			atomic.AddUint64(&errorNum, 1)
+			return
+		}
+		resp.Body.Close()
+		atomic.AddUint64(&sentNum, 1)
+	}
+
+	if c.rate <= 0 {
+		for ctx.Err() == nil {
+			go biu()
+		}
+	} else {
+		tk := time.NewTicker(time.Second)
+		defer tk.Stop()
+		for ctx.Err() == nil {
+			for i := 0; i < c.rate; i++ {
+				go biu()
+			}
+			<-tk.C
+		}
+	}
 }
 
 func handleCookie(f io.Reader, URL string) http.CookieJar {
@@ -117,7 +112,6 @@ func handleCookie(f io.Reader, URL string) http.CookieJar {
 func main() {
 	// flags
 	rate := flag.Int("r", 1000, `sending rate, <num>/s`)
-	timeout := flag.Int("timeout", 5, "timeout for the client")
 	target := flag.String("u", "http://localhost", "target url")
 	method := flag.String("m", "GET", "method: GET|POST")
 	postFile := flag.String("pf", "", "post file path")
@@ -134,16 +128,21 @@ func main() {
 	signal.Notify(sigChan, os.Interrupt)
 
 	var (
-		pld       io.Reader
+		pld       []byte
 		cookieJar http.CookieJar
 	)
+
 	if *postFile != "" {
 		if f, err := os.Open(*postFile); err != nil {
 			log.Fatalf("open file error: %s", err)
 		} else {
-			pld = f
+			pld, err = ioutil.ReadAll(f)
+			if err != nil {
+				log.Fatalf("read file error: %s", err)
+			}
 		}
 	}
+
 	if *cookieFile != "" {
 		if f, err := os.Open(*cookieFile); err != nil {
 			log.Fatalf("open file error: %s", err)
@@ -154,7 +153,7 @@ func main() {
 
 	client := &cli{
 		C: http.Client{
-			Timeout: time.Duration(*timeout) * time.Second,
+			Timeout: time.Second * 5,
 			Jar:     cookieJar,
 		},
 		url:     *target,
@@ -164,8 +163,8 @@ func main() {
 	}
 
 	// ready
-	log.Printf("send [%d]/s packages to [%s], method: %s, timeout: %d",
-		*rate, *target, *method, *timeout)
+	log.Printf("send [%d]/s packages to [%s], method: %s",
+		*rate, *target, *method)
 
 	// go
 	go client.do(ctx)

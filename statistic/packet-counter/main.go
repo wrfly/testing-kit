@@ -133,7 +133,7 @@ func statistic(ctx context.Context) {
 			atomic.StoreUint64(&nUDP, 0)
 			atomic.StoreUint64(&nTCP, 0)
 			if nu != 0 || nt != 0 {
-				log.Printf("UDP: %v/s   TCP: %v/s\n", nu, nt)
+				log.Printf("UDP: %v/s\tTCP: %v/s\n", nu, nt)
 			}
 		}
 	}
