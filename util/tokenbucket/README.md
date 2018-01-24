@@ -1,6 +1,6 @@
 # Token bucket
 
-`import "github.com/wrfly/testing-kit/utils/tokenbucket"` to use this token bucket lib.
+`import "github.com/wrfly/testing-kit/util/tokenbucket"` to use this token bucket lib.
 
 This token bucket has no ticker to fill the bucket in background, just calculate the `next round` and make the bucket avaliable. Quite different from other token buckets implemented by locks or tickers or compare timestamps every time.
 

@@ -5,7 +5,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -89,7 +88,7 @@ func (c *cli) do(ctx context.Context) {
 	}
 }
 
-func handleCookie(f io.Reader, URL string) http.CookieJar {
+func handleCookie(data []byte, URL string) http.CookieJar {
 	u, err := url.Parse(URL)
 	if err != nil {
 		log.Fatalf("handle cookie error: %s", err)
@@ -129,26 +128,23 @@ func main() {
 
 	var (
 		pld       []byte
+		err       error
 		cookieJar http.CookieJar
 	)
 
 	if *postFile != "" {
-		if f, err := os.Open(*postFile); err != nil {
+		pld, err = ioutil.ReadFile(*postFile)
+		if err != nil {
 			log.Fatalf("open file error: %s", err)
-		} else {
-			pld, err = ioutil.ReadAll(f)
-			if err != nil {
-				log.Fatalf("read file error: %s", err)
-			}
 		}
 	}
 
 	if *cookieFile != "" {
-		if f, err := os.Open(*cookieFile); err != nil {
+		data, err := ioutil.ReadFile(*cookieFile)
+		if err != nil {
 			log.Fatalf("open file error: %s", err)
-		} else {
-			cookieJar = handleCookie(f, *target)
 		}
+		cookieJar = handleCookie(data, *target)
 	}
 
 	client := &cli{

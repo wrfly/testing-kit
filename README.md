@@ -106,7 +106,7 @@ Usage of ./packet-collector:
 
 ### tokenbucket
 
-`import "github.com/wrfly/testing-kit/utils/tokenbucket"` to use this token bucket lib.
+`import "github.com/wrfly/testing-kit/util/tokenbucket"` to use this token bucket lib.
 
 Performence(`example/main.go` with *i7-7600U*):
 
