@@ -128,12 +128,13 @@ func statistic(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-tk.C:
-			nu = atomic.LoadUint64(&nUDP)
-			nt = atomic.LoadUint64(&nTCP)
-			atomic.StoreUint64(&nUDP, 0)
-			atomic.StoreUint64(&nTCP, 0)
-			if nu != 0 || nt != 0 {
-				log.Printf("UDP: %v/s\tTCP: %v/s\n", nu, nt)
+			if n := atomic.LoadUint64(&nUDP) - nu; n != 0 {
+				nu = atomic.LoadUint64(&nUDP)
+				log.Printf("UDP: %v/s\tTotal: %v\n", n, nu)
+			}
+			if n := atomic.LoadUint64(&nTCP) - nt; n != 0 {
+				nt = atomic.LoadUint64(&nTCP)
+				log.Printf("TCP: %v/s\tTotal: %v\n", n, nt)
 			}
 		}
 	}
