@@ -61,8 +61,8 @@ func serveUDP(ctx context.Context, port int) {
 	defer l.Close()
 
 	go func() {
+		buffer := make([]byte, 1)
 		for {
-			buffer := make([]byte, 1)
 			_, _, err := l.ReadFrom(buffer)
 			if err != nil {
 				if ctx.Err() != nil {
