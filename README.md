@@ -2,6 +2,7 @@
 
 some tools for testing
 
+[![Build Status](https://travis-ci.org/wrfly/testing-kit.svg?branch=master)](https://travis-ci.org/wrfly/testing-kit)
 ## Stress-Testing
 
 ### udp-repeater
@@ -60,24 +61,28 @@ Usage of ./creazy-udp:
         client num, default is runtime.NumCPU() (default 4)
   -d string
         data to send, empty by default
-  -n int
-        send rate, <num>/s (default 10000)
-  -r string
-        remote addr to send packet (default "localhost:12345")
+  -n uint
+        total number, set to positive for counter mode (ignore rate)
+  -r int
+        send rate, <num>/s, set to -1 for ultimate (default 10000)
+  -t string
+        target addr to send packet (default "localhost:12345")
 
 ➜ ./creazy-udp -d "hello"
-2018/01/11 22:27:02 send 'hello' to [localhost:12345] with [4] clients at 10000/s
-2018/01/11 22:27:03 send: 10000/s
-2018/01/11 22:27:04 send: 10000/s
-2018/01/11 22:27:05 send: 10000/s
-2018/01/11 22:27:06 send: 10000/s
-2018/01/11 22:27:07 send: 10000/s
-2018/01/11 22:27:08 send: 10000/s
-2018/01/11 22:27:09 send: 10000/s
-2018/01/11 22:27:10 send: 10000/s
-2018/01/11 22:27:11 send: 10000/s
-^C2018/01/11 22:27:11 quit
+2018/02/07 11:54:29 send 'hello' to [localhost:12345] with [4] clients at 10000/s
+2018/02/07 11:54:30 Send: 10000/s       Total sent 10000
+2018/02/07 11:54:31 Send: 10000/s       Total sent 20000
+2018/02/07 11:54:32 Send: 10000/s       Total sent 30000
+^C2018/02/07 11:54:32 quit
+2018/02/07 11:54:32 total sent 40000
 ➜
+
+➜ ./creazy-udp -d hello -n 100
+2018/02/07 12:09:37 send 'hello' to [localhost:12345] with [4] clients fot [100] times
+2018/02/07 12:09:37 Send 100 packets, done
+2018/02/07 12:09:37 quit
+2018/02/07 12:09:37 total sent 100
+➜ 
 ```
 
 ## Statistic
@@ -91,15 +96,11 @@ Usage of ./packet-collector:
         local port to listen (default 12345)
 
 ➜ ./packet-collector
-2018/01/09 21:28:26 listenning on UDP :12345
-2018/01/09 21:28:26 listenning on TCP :12345
-2018/01/09 21:28:33 TCP: 737038/s
-2018/01/09 21:28:34 TCP: 2917838/s
-2018/01/09 21:28:35 TCP: 3054689/s
-2018/01/09 21:28:36 TCP: 3057794/s
-2018/01/09 21:28:43 TCP: 2979672/s
-2018/01/09 21:28:44 TCP: 2210824/s
-^C2018/01/09 21:28:56 quit
+2018/02/07 12:11:04 listenning on UDP :12345
+2018/02/07 12:11:04 listenning on TCP :12345
+2018/02/07 12:11:06 UDP: 100/s  Total: 100
+^C2018/02/07 12:11:08 quit
+2018/02/07 12:11:08 total received: UDP [100];TCP [0]
 ```
 
 ## Utils
