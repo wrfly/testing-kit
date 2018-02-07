@@ -51,6 +51,8 @@ func main() {
 	cancel()
 
 	log.Println("quit")
+	log.Printf("total sent: UDP %v\tTCP%v\n",
+		atomic.LoadUint64(&nUDP), atomic.LoadUint64(&nTCP))
 }
 
 func serveUDP(ctx context.Context, port int) {

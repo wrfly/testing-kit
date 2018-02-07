@@ -105,6 +105,7 @@ func main() {
 	}
 
 	log.Println("quit")
+	log.Printf("total sent %v\n", atomic.LoadUint64(&sentPkt))
 }
 
 func statistic(ctx context.Context) {
