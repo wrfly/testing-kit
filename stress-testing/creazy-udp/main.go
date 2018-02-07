@@ -20,6 +20,7 @@ var (
 	clientNum *int
 	ttnum     *uint64
 
+	doneCh    = make(chan struct{})
 	connGroup []net.Conn
 
 	sentPkt uint64 // send per second
@@ -79,12 +80,12 @@ func main() {
 		log.Printf("send '%s' to [%s] with [%d] clients fot [%d] times\n", *data,
 			*target, *clientNum, *ttnum)
 		go func() {
-			defer log.Printf("Send %d packets, done\n", *ttnum)
 			for {
 				for _, conn := range connGroup {
 					atomic.AddUint64(&sentPkt, 1)
 					conn.Write([]byte(*data))
 					if atomic.LoadUint64(&sentPkt) >= *ttnum {
+						doneCh <- struct{}{}
 						return
 					}
 				}
@@ -97,7 +98,11 @@ func main() {
 	sigChan := make(chan os.Signal)
 	signal.Notify(sigChan, os.Interrupt)
 
-	<-sigChan
+	select {
+	case <-sigChan:
+	case <-doneCh:
+		log.Printf("Send %d packets, done\n", *ttnum)
+	}
 	cancel()
 
 	for _, conn := range connGroup {

@@ -51,7 +51,7 @@ func main() {
 	cancel()
 
 	log.Println("quit")
-	log.Printf("total sent: UDP %v\tTCP%v\n",
+	log.Printf("total received: UDP [%v];TCP [%v]\n",
 		atomic.LoadUint64(&nUDP), atomic.LoadUint64(&nTCP))
 }
 
