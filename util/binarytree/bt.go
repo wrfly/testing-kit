@@ -49,3 +49,30 @@ func BuildTree(list []int) *TreeNode {
 	// we ranged over the list and got a tree
 	return root
 }
+
+func preorderTraversal(root *TreeNode) []int {
+	if root == nil {
+		return nil
+	}
+	r := []int{root.Val}
+	r = append(r, preorderTraversal(root.Left)...)
+	return append(r, preorderTraversal(root.Right)...)
+}
+
+func inorderTraversal(root *TreeNode) []int {
+	if root == nil {
+		return nil
+	}
+	r := inorderTraversal(root.Left)
+	r = append(r, root.Val)
+	return append(r, inorderTraversal(root.Right)...)
+}
+
+func postorderTraversal(root *TreeNode) []int {
+	if root == nil {
+		return nil
+	}
+	r := postorderTraversal(root.Left)
+	r = append(r, postorderTraversal(root.Right)...)
+	return append(r, root.Val)
+}
