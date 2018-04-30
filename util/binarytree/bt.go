@@ -76,3 +76,78 @@ func postorderTraversal(root *TreeNode) []int {
 	r = append(r, postorderTraversal(root.Right)...)
 	return append(r, root.Val)
 }
+
+func inorderTraversal_2(root *TreeNode) []int {
+	if root == nil {
+		return nil
+	}
+
+	stack := []*TreeNode{root}
+	r := []int{}
+	leftVisited := false
+
+	for len(stack) != 0 {
+		// left first
+		if root.Left != nil && !leftVisited {
+			root = root.Left
+			// append this node to stack
+			stack = append(stack, root)
+			continue
+		}
+
+		// left is nil, append this node
+		r = append(r, root.Val)
+		stack = stack[:len(stack)-1]
+
+		// if right is not nil, point root to it
+		if root.Right != nil {
+			root = root.Right
+			// append this node to stack
+			stack = append(stack, root)
+			// reset the `leftVisited` flag
+			leftVisited = false
+			continue
+		}
+
+		// when we reached the last one, stack is empty
+		// break here
+		if len(stack) == 0 {
+			break
+		}
+		// pop one node from stack and set the `leftVisited` flag
+		root = stack[len(stack)-1]
+		leftVisited = true
+	}
+	return r
+}
+
+func inorderTraversal_3(root *TreeNode) []int {
+	if root == nil {
+		return nil
+	}
+
+	stack := []*TreeNode{}
+	r := []int{}
+
+	for {
+		stack = append(stack, root)
+		if root.Left != nil {
+			root = root.Left
+			continue
+		}
+
+	pop:
+		root = stack[len(stack)-1]
+		r = append(r, root.Val)
+		stack = stack[:len(stack)-1]
+		if root.Right != nil {
+			root = root.Right
+			continue
+		}
+		if len(stack) == 0 {
+			break
+		}
+		goto pop
+	}
+	return r
+}
