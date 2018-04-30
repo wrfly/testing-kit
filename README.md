@@ -91,17 +91,23 @@ Usage of ./creazy-udp:
 ### packet-counter
 
 ```txt
-➜ ./packet-collector -h
-Usage of ./packet-collector:
+➜ ./packet-counter -h
+Usage of ./packet-counter:
   -l int
         local port to listen (default 12345)
 
-➜ ./packet-collector
-2018/02/07 12:11:04 listenning on UDP :12345
-2018/02/07 12:11:04 listenning on TCP :12345
-2018/02/07 12:11:06 UDP: 100/s  Total: 100
-^C2018/02/07 12:11:08 quit
-2018/02/07 12:11:08 total received: UDP [100];TCP [0]
+➜ ./packet-counter
+2018/04/30 17:11:38 listenning on UDP :12345
+2018/04/30 17:11:38 listenning on TCP :12345
+2018/04/30 17:11:38 TCP: 1657022/s|17 MB/s      Total: 16986114
+2018/04/30 17:11:39 TCP: 1650958/s|19 MB/s      Total: 18637072
+...
+...
+2018/04/30 17:11:42 TCP: 1647063/s|24 MB/s      Total: 23584228
+2018/04/30 17:11:43 TCP: 1657610/s|25 MB/s      Total: 25241838
+2018/04/30 17:11:44 TCP: 1234706/s|26 MB/s      Total: 26476544
+^C2018/04/30 17:12:01 quit
+2018/04/30 17:12:01 total received: UDP [70777|71 kB];TCP [26476544|26 MB]
 ```
 
 ## Utils

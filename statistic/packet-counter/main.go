@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"net"
 	"os"
 	"os/signal"
@@ -15,10 +16,9 @@ import (
 
 var (
 	addr string
-
 	port *int
-	nUDP uint64
-	nTCP uint64
+
+	nUDP, nTCP, sUDP, sTCP uint64
 )
 
 func main() {
@@ -51,8 +51,10 @@ func main() {
 	cancel()
 
 	log.Println("quit")
-	log.Printf("total received: UDP [%v];TCP [%v]\n",
-		atomic.LoadUint64(&nUDP), atomic.LoadUint64(&nTCP))
+	log.Printf("total received: UDP [%d|%s];TCP [%d|%s]\n",
+		atomic.LoadUint64(&nUDP), formatBytes(atomic.LoadUint64(&sUDP)),
+		atomic.LoadUint64(&nTCP), formatBytes(atomic.LoadUint64(&sTCP)),
+	)
 }
 
 func serveUDP(ctx context.Context, port int) {
@@ -65,7 +67,7 @@ func serveUDP(ctx context.Context, port int) {
 	go func() {
 		buffer := make([]byte, 1)
 		for {
-			_, _, err := l.ReadFrom(buffer)
+			n, _, err := l.ReadFrom(buffer)
 			if err != nil {
 				if ctx.Err() != nil {
 					return
@@ -73,6 +75,7 @@ func serveUDP(ctx context.Context, port int) {
 				log.Printf("error: %s\n", err)
 				continue
 			}
+			atomic.AddUint64(&sUDP, uint64(n))
 			atomic.AddUint64(&nUDP, 1)
 		}
 	}()
@@ -102,7 +105,7 @@ func serveTCP(ctx context.Context, port int) {
 			go func(c net.Conn) {
 				defer c.Close()
 				for {
-					_, err := c.Read(buffer)
+					n, err := c.Read(buffer)
 					if err != nil {
 						if err == io.EOF || ctx.Err() != nil {
 							return
@@ -110,6 +113,7 @@ func serveTCP(ctx context.Context, port int) {
 						log.Printf("error: %s\n", err)
 						continue
 					}
+					atomic.AddUint64(&sTCP, uint64(n))
 					atomic.AddUint64(&nTCP, 1)
 				}
 			}(c)
@@ -123,6 +127,9 @@ func serveTCP(ctx context.Context, port int) {
 func statistic(ctx context.Context) {
 	nu := atomic.LoadUint64(&nUDP)
 	nt := atomic.LoadUint64(&nTCP)
+	su := atomic.LoadUint64(&sUDP)
+	st := atomic.LoadUint64(&sTCP)
+
 	tk := time.NewTicker(time.Second)
 	defer tk.Stop()
 	for {
@@ -132,12 +139,42 @@ func statistic(ctx context.Context) {
 		case <-tk.C:
 			if n := atomic.LoadUint64(&nUDP) - nu; n != 0 {
 				nu = atomic.LoadUint64(&nUDP)
-				log.Printf("UDP: %v/s\tTotal: %v\n", n, nu)
+				s := atomic.LoadUint64(&sUDP) - su
+				size := formatBytes(s)
+				log.Printf("UDP: %d/s|%s/s\tTotal: %d\n", n, size, nu)
 			}
 			if n := atomic.LoadUint64(&nTCP) - nt; n != 0 {
 				nt = atomic.LoadUint64(&nTCP)
-				log.Printf("TCP: %v/s\tTotal: %v\n", n, nt)
+				s := atomic.LoadUint64(&sTCP) - st
+				size := formatBytes(s)
+				log.Printf("TCP: %d/s|%s/s\tTotal: %d\n", n, size, nt)
 			}
 		}
 	}
+}
+
+// thanks to https://github.com/dustin/go-humanize/blob/master/bytes.go
+
+func formatBytes(s uint64) string {
+	sizes := []string{"B", "kB", "MB", "GB", "TB", "PB", "EB"}
+	return humanateBytes(s, 1000, sizes)
+}
+
+func logn(n, b float64) float64 {
+	return math.Log(n) / math.Log(b)
+}
+
+func humanateBytes(s uint64, base float64, sizes []string) string {
+	if s < 10 {
+		return fmt.Sprintf("%d B", s)
+	}
+	e := math.Floor(logn(float64(s), base))
+	suffix := sizes[int(e)]
+	val := math.Floor(float64(s)/math.Pow(base, e)*10+0.5) / 10
+	f := "%.0f %s"
+	if val < 10 {
+		f = "%.1f %s"
+	}
+
+	return fmt.Sprintf(f, val, suffix)
 }
