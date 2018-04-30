@@ -3,6 +3,7 @@
 some tools for testing
 
 [![Build Status](https://travis-ci.org/wrfly/testing-kit.svg?branch=master)](https://travis-ci.org/wrfly/testing-kit)
+
 ## Stress-Testing
 
 ### udp-repeater
@@ -82,7 +83,7 @@ Usage of ./creazy-udp:
 2018/02/07 12:09:37 Send 100 packets, done
 2018/02/07 12:09:37 quit
 2018/02/07 12:09:37 total sent 100
-➜ 
+➜
 ```
 
 ## Statistic

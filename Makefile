@@ -1,22 +1,23 @@
-.PHONY: statistic stress-testing util
+REPO = github.com/wrfly/testing-kit
 
-packet-counter:
-	go build -o bin/packet-counter statistic/packet-counter/main.go
+.PHONY: build test clean all
 
-statistic: packet-counter
+BINS = $(shell find * -name 'main.go' | grep -v util)
+build:
+	@for bin in $(BINS);do \
+		NAME=$$(echo $$bin | cut -d"/" -f2); \
+		DIR=$$(echo $$bin | cut -d"/" -f1); \
+		echo Building $$NAME...;\
+		go build -o bin/$$NAME $(REPO)/$$DIR/$$NAME; \
+	done
 
-creazy-http:
-	go build -o bin/creazy-http stress-testing/creazy-http/main.go
+TESTCMD = go test -v -timeout 30s
+test:
+	@find util/* -maxdepth 0 -type d -exec echo $(REPO)/{} \;\
+	| xargs $(TESTCMD)
 
-creazy-udp:
-	go build -o bin/creazy-udp stress-testing/creazy-udp/main.go
+clean:
+	@echo "Clean..."
+	@rm -rf bin
 
-tcp-repeater:
-	go build -o bin/tcp-repeater stress-testing/tcp-repeater/main.go
-
-udp-repeater:
-	go build -o bin/udp-repeater stress-testing/udp-repeater/main.go
-
-stress-testing: creazy-http creazy-udp tcp-repeater udp-repeater
-
-all: statistic stress-testing
+all: build test clean
