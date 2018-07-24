@@ -7,7 +7,11 @@ import (
 	"time"
 )
 
-func TestTokenBucket(t *testing.T) {
+type tb interface {
+	TakeOne() bool
+}
+
+func testBucket(bkt tb) {
 	var take, drop = 0, 0
 	var start time.Time
 
@@ -17,7 +21,6 @@ func TestTokenBucket(t *testing.T) {
 	defer cancel()
 
 	start = time.Now()
-	bkt := New(1000, time.Second)
 	for ctx.Err() == nil {
 		if bkt.TakeOne() {
 			take++
@@ -56,4 +59,14 @@ func TestTokenBucket(t *testing.T) {
 	log.Println("used:", time.Since(start).Seconds(), "s")
 	log.Println("take:", take)
 	log.Println("drop:", drop)
+}
+
+func TestSmothBucket(t *testing.T) {
+	bkt := NewSmoth(1000, time.Second)
+	testBucket(bkt)
+}
+
+func TestBucket(t *testing.T) {
+	bkt := New(1000, time.Second)
+	testBucket(bkt)
 }
