@@ -8,7 +8,7 @@ import (
 	"github.com/bsm/ratelimit"
 	jujuRatelimit "github.com/juju/ratelimit"
 	"github.com/tsenart/tb"
-	"github.com/wrfly/testing-kit/utils/tokenbucket"
+	"github.com/wrfly/testing-kit/util/tokenbucket"
 )
 
 func main() {
@@ -17,6 +17,7 @@ func main() {
 	jujuBkt := jujuRatelimit.NewBucketWithRate(1000, 1000)
 	bkt := ratelimit.New(1000, time.Second)
 	wrflyBkt := tokenbucket.New(1000, time.Second)
+	smothBkt := tokenbucket.New(1000, time.Second)
 	tbBkt := tb.NewBucket(1000, time.Second)
 
 	var (
@@ -73,6 +74,22 @@ func main() {
 		drop++
 	}
 	log.Println("wrfly:", time.Since(start).Seconds())
+	log.Println("take:", take)
+	log.Println("drop:", drop)
+	log.Println()
+
+	drop = 0
+	take = 0
+	ctx, cancel = context.WithDeadline(context.Background(), time.Now().Add(duration))
+	start = time.Now()
+	for ctx.Err() == nil {
+		if smothBkt.TakeOne() {
+			take++
+			continue
+		}
+		drop++
+	}
+	log.Println("smoth:", time.Since(start).Seconds())
 	log.Println("take:", take)
 	log.Println("drop:", drop)
 	log.Println()
@@ -146,6 +163,21 @@ func main() {
 		drop++
 	}
 	log.Println("wrfly:", time.Since(start).Seconds())
+	log.Println("take:", take)
+	log.Println("drop:", drop)
+	log.Println()
+
+	drop = 0
+	take = 0
+	start = time.Now()
+	for i := 0; i < end; i++ {
+		if smothBkt.TakeOne() {
+			take++
+			continue
+		}
+		drop++
+	}
+	log.Println("smoth:", time.Since(start).Seconds())
 	log.Println("take:", take)
 	log.Println("drop:", drop)
 	log.Println()
