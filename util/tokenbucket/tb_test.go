@@ -7,11 +7,7 @@ import (
 	"time"
 )
 
-type tb interface {
-	TakeOne() bool
-}
-
-func testBucket(bkt tb) {
+func testBucket(bkt Bucket) {
 	var take, drop = 0, 0
 	var start time.Time
 
@@ -61,8 +57,8 @@ func testBucket(bkt tb) {
 	log.Println("drop:", drop)
 }
 
-func TestSmothBucket(t *testing.T) {
-	bkt := NewSmoth(1000, time.Second)
+func TestSmoothBucket(t *testing.T) {
+	bkt := NewSmooth(1000, time.Second)
 	testBucket(bkt)
 }
 

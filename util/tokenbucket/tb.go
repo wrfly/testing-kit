@@ -3,7 +3,7 @@ package tokenbucket provides a token bucket ...
 
 example:
 
-	bkt := NewSmoth(1000, time.Second)
+	bkt := NewSmooth(1000, time.Second)
 	for check() {
 		if bkt.TakeOne() {
 			take++
@@ -21,31 +21,35 @@ import (
 	"time"
 )
 
-type smothBucket struct {
+type Bucket interface {
+	TakeOne() bool
+}
+
+type smoothBucket struct {
 	lastGet int64
 	period  int64
 	enough  int32
 }
 
-var globalBucket *smothBucket
-var globalIniter = sync.Once{}
+var globalBucket *smoothBucket
+var gOnce = sync.Once{}
 
-// NewSmoth returns a smoth token bucket with `tokens` per `period`
-func NewSmoth(tokens int64, period time.Duration) *smothBucket {
+// NewSmooth returns a smooth token bucket with `tokens` per `period`
+func NewSmooth(tokens int64, period time.Duration) *smoothBucket {
 	period /= time.Duration(tokens)
-	return &smothBucket{
+	return &smoothBucket{
 		lastGet: time.Now().UnixNano(),
 		period:  period.Nanoseconds(),
 		enough:  1,
 	}
 }
 
-// NewGlobalSmoth returns a smoth token bucket which is
+// NewGlobalSmooth returns a smooth token bucket which is
 // global shared and thread-safe
-func NewGlobalSmoth(tokens int64, period time.Duration) *smothBucket {
+func NewGlobalSmooth(tokens int64, period time.Duration) Bucket {
 	period /= time.Duration(tokens)
-	globalIniter.Do(func() {
-		globalBucket = &smothBucket{
+	gOnce.Do(func() {
+		globalBucket = &smoothBucket{
 			lastGet: time.Now().UnixNano(),
 			period:  period.Nanoseconds(),
 			enough:  1,
@@ -55,7 +59,7 @@ func NewGlobalSmoth(tokens int64, period time.Duration) *smothBucket {
 }
 
 // TakeOne return true if you can take 1 from the bucket
-func (bkt *smothBucket) TakeOne() bool {
+func (bkt *smoothBucket) TakeOne() bool {
 	// same round: not enough
 	if atomic.LoadInt32(&bkt.enough) == 0 {
 		return false
@@ -92,7 +96,7 @@ type bucket struct {
 	notEnough int32
 }
 
-func New(tokens int64, period time.Duration) *bucket {
+func New(tokens int64, period time.Duration) Bucket {
 	return &bucket{
 		lastGet: time.Now().UnixNano(),
 		total:   tokens,
